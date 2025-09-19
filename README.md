@@ -19,7 +19,7 @@ This library consists of three main modules:
 ### General Installation
 To install the base package with all modules:
 ```bash
-pip install git+<https://github.com/myantandco/mbst_bleusb_comm_toolkit.git[all]>
+pip install git+<https://github.com/mohammadjambar1993/CSA/.git[all]>
 ```
 
 ### Specific Release Installation
@@ -27,17 +27,17 @@ You must install the entire package for complete functionality
 
 - **Pip install via terminal**:
 ```bash
-pip install git+<https://github.com/myantandco/mbst_bleusb_comm_toolkit.git@0.0.4#egg=bleusb_comm_toolkit[all]>
+pip install git+<https://github.com/mohammadjambar1993/CSA/.git@0.0.4#egg=bleusb_comm_toolkit[all]>
 ```
 
 - **Pip install via terminal**:
 ```bash
-pip install "bleusb_comm_toolkit[all] @ git+https://github.com/myantandco/mbst_bleusb_comm_toolkit.git@0.0.4"
+pip install "bleusb_comm_toolkit[all] @ git+https://github.com/mohammadjambar1993/CSA.gitt@0.0.4"
 ```
 
 - **requirements.txt in project**:
 ```requirements
-git+https://github.com/myantandco/mbst_bleusb_comm_toolkit.git@0.0.4#egg=bleusb_comm_toolkit[all]
+git+https://github.com/mohammadjambar1993/CSA/@0.0.4#egg=bleusb_comm_toolkit[all]
 ```
 
 ---
@@ -277,7 +277,7 @@ mbst_bleusb_comm_toolkit/
 ---
 ## Author
 Susan Peters
-susan.peters@myant.ca
+mohammadjambar@gmail.com
 
 ---
 # Developer Usage
@@ -296,7 +296,7 @@ Ensure you have Python installed on your system (version 3.9). You can download 
 First, clone the repository to your local machine:
 
 ```bash
-git clone https://github.com/myantandco/mbst_bleusb_comm_toolkit.git
+git https://github.com/mohammadjambar1993/CSA.git
 cd mbst_bleusb_comm_toolkit
 
 
