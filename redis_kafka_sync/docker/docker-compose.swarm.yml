@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  redis-producer:
+    image: ${REGISTRY:-localhost:5000}/edn-reactive-producer:${TAG:-latest}
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis-cache}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_DB=${REDIS_DB:-0}
+      - REDIS_MAXMEMORY=${REDIS_MAXMEMORY:-1gb}
+      - REDIS_MAXMEMORY_POLICY=${REDIS_MAXMEMORY_POLICY:-volatile-ttl}
+      - REDIS_TIME_TO_LIVE=${REDIS_TIME_TO_LIVE:-3600}
+      - REDIS_STREAMS=${REDIS_STREAMS:-biosignal-stream}
+      - REDIS_CONSUMER_GROUP=${REDIS_CONSUMER_GROUP:-producer-group}
+      - REDIS_CONSUMER_NAME=${REDIS_CONSUMER_NAME:-producer-1}
+      # Remote Kafka configuration
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-remote-kafka:9092}
+      - KAFKA_TOPIC=${KAFKA_TOPIC:-biosignal-topic}
+      - KAFKA_SCHEMA_REGISTRY_URL=${KAFKA_SCHEMA_REGISTRY_URL:-http://remote-schema-registry:8081}
+      - KAFKA_SECURITY_PROTOCOL=${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}
+      - KAFKA_MAX_REQUEST_SIZE=${KAFKA_MAX_REQUEST_SIZE:-20971520}
+      - PRODUCER_CLIENT_ID=${PRODUCER_CLIENT_ID:-producer.default}
+      - STREAM_AUTO_DISCOVERY=${STREAM_AUTO_DISCOVERY:-true}
+      - STREAM_DISCOVERY_PATTERNS=${STREAM_DISCOVERY_PATTERNS:-*-stream,device:*:stream,biosignal-*}
+      - STREAM_DISCOVERY_INTERVAL=${STREAM_DISCOVERY_INTERVAL:-10}
+      - POLL_INTERVAL=${POLL_INTERVAL:-0.1}
+      - BATCH_SIZE=${BATCH_SIZE:-100}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../env.conf:/app/env.conf
+      - ../src:/app/src
+    command: python /app/src/reactive_producer.py
+    networks:
+      - edn-network
+    deploy:
+      mode: replicated
+      replicas: ${REPLICAS:-1}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 0s
+        failure_action: rollback
+        order: stop-first
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.socket().connect((\"${KAFKA_BOOTSTRAP_SERVERS:-remote-kafka}\", 9092))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  redis-cache:
+    image: redis:alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: >
+      redis-server 
+      --appendonly yes 
+      --appendfsync everysec
+      --auto-aof-rewrite-percentage 100
+      --auto-aof-rewrite-min-size 64mb
+      --requirepass ${REDIS_PASSWORD:-""}
+      --maxmemory ${REDIS_MAXMEMORY:-1gb}
+      --maxmemory-policy ${REDIS_MAXMEMORY_POLICY:-volatile-ttl}
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    volumes:
+      - redis-data:/data
+    networks:
+      - edn-network
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 2048M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  edn-network:
+    external: true
+
+volumes:
+  redis-data: 

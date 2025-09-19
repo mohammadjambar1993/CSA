@@ -1,0 +1,65 @@
+services:
+  redis-mqtt-sync:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: redis-mqtt-sync
+    env_file:
+      - ../env.conf
+    volumes:
+      - ../src:/app/src # Mount src for development changes
+      - ../env.conf:/app/env.conf # Mount env.conf
+    depends_on:
+      - redis-cache # Optional dependency - comment out if using external Redis
+    restart: unless-stopped
+    environment:
+      # These can be overridden by env.conf
+      - REDIS_HOST=${REDIS_HOST:-redis-cache} # Points to local service by default
+    networks:
+      - sync-network # Use a common network
+
+  # Redis service - can be used or replaced with an external Redis
+  # Similar to other modules (postgres-sync, kafka-producer, redis-to-redis)
+  redis-cache:
+    image: redis:7-alpine
+    container_name: redis-cache-mqtt # Use a unique name if running other redis instances
+    ports:
+      - "6381:6379" # Use a different host port if 6379 is taken
+    volumes:
+      - redis-mqtt-data:/data
+    command: ["redis-server", "--appendonly", "yes"] # Enable AOF persistence
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sync-network
+
+  # OPTIONAL: Local MQTT Broker for testing only
+  # In production, use a remote MQTT broker by configuring the MQTT_HOST in env.conf
+  # Uncomment this service if you need a local broker for development/testing
+  # mqtt-broker:
+  #   image: eclipse-mosquitto:2
+  #   container_name: mqtt-broker
+  #   ports:
+  #     - "1883:1883" # Default MQTT port
+  #     - "9001:9001" # Default Websockets port
+  #   volumes:
+  #     - ./mosquitto/config:/mosquitto/config
+  #     # - ./mosquitto/data:/mosquitto/data # Persist data if needed
+  #     # - ./mosquitto/log:/mosquitto/log   # Persist logs if needed
+  #   restart: unless-stopped
+  #   networks:
+  #     - sync-network
+
+volumes:
+  redis-mqtt-data:
+    name: redis-mqtt-data # Named volume for persistence across restarts
+
+networks:
+  sync-network:
+    driver: bridge
+    # If connecting to external Redis/MQTT, consider making this network external
+    # external: true
+    # name: your-existing-network 

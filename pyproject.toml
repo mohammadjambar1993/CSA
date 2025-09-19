@@ -1,0 +1,6 @@
+[build-system]
+requires = ["setuptools>=61", "setuptools_scm", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "src/mbst/bleusb_comm_toolkit/_version.py"

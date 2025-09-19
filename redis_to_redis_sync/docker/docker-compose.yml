@@ -1,0 +1,47 @@
+services:
+  redis-to-redis-sync:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: redis-to-redis-sync
+    env_file:
+      - ../env.conf
+    volumes:
+      - ../src:/app/src # Mount src for development changes
+      - ../env.conf:/app/env.conf # Mount env.conf
+    depends_on:
+      - source-redis
+      - target-redis
+    restart: unless-stopped
+    networks:
+      - sync-network
+
+  # Optional: Source Redis instance for local testing
+  source-redis:
+    image: redis:7-alpine
+    container_name: source-redis
+    ports:
+      - "6378:6379" # Expose on a different host port
+    volumes:
+      - source-redis-data:/data
+    networks:
+      - sync-network
+
+  # Optional: Target Redis instance for local testing
+  target-redis:
+    image: redis:7-alpine
+    container_name: target-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - target-redis-data:/data
+    networks:
+      - sync-network
+
+volumes:
+  source-redis-data:
+  target-redis-data:
+
+networks:
+  sync-network:
+    driver: bridge 

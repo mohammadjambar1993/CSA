@@ -1,0 +1,61 @@
+services:
+  redis-cache:
+    image: redis:7-alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    command: redis-server
+      --appendonly yes
+      --auto-aof-rewrite-percentage 100
+      --auto-aof-rewrite-min-size 64mb
+      --maxmemory ${SOURCE_REDIS_MAXMEMORY:-1gb}
+      --maxmemory-policy ${SOURCE_REDIS_MAXMEMORY_POLICY:-volatile-ttl}
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    volumes:
+      - redis-data:/data
+    env_file:
+      - ../env.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - sync-network
+
+  redis-postgres-sync-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.sync
+    container_name: redis-postgres-sync-service
+    depends_on:
+      - redis-cache
+    env_file:
+      - ../env.conf
+    command: python3 -m src.main --mode=sync
+    restart: unless-stopped
+    networks:
+      - sync-network
+
+  redis-stream-processor-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.monitor
+    container_name: redis-stream-processor-service
+    depends_on:
+      - redis-cache
+    env_file:
+      - ../env.conf
+    command: python3 -m src.main --mode=monitor
+    restart: unless-stopped
+    networks:
+      - sync-network
+
+volumes:
+  redis-data:
+
+networks:
+  sync-network:
+    driver: bridge 

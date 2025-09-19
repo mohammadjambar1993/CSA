@@ -1,0 +1,9 @@
+setuptools~=68.0.0
+pytest>=8.3.3
+tox ~= 4.23.2
+flake8
+black
+mypy
+isort
+colorama
+
